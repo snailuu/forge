@@ -67,24 +67,52 @@ sudo cp target/release/forge /usr/local/bin/
 
 项目使用 GitHub Actions 自动构建和发布：
 
-```bash
-# 1. 提交代码
-git add .
-git commit -m "feat: 新功能"
-git push
+### 开发分支构建（dev）
 
-# 2. 打标签触发发布
+```bash
+# 推送到 dev 分支会自动构建
+git checkout dev
+git push origin dev
+
+# 产物：forge-x86_64-unknown-linux-gnu-dev.tar.gz
+# 下载：GitHub Actions -> Artifacts
+```
+
+### 主分支构建（main）
+
+```bash
+# 推送到 main 分支会自动构建
+git checkout main
+git push origin main
+
+# 产物：forge-x86_64-unknown-linux-gnu-main.tar.gz
+# 下载：GitHub Actions -> Artifacts
+```
+
+### 正式版本发布（tag）
+
+```bash
+# 打标签触发正式发布
 git tag v0.1.0
 git push origin v0.1.0
 
-# 3. GitHub Actions 会自动：
-#    - 编译 4 个平台的二进制文件
-#    - 打包成 tar.gz
-#    - 创建 GitHub Release
-#    - 上传所有平台的安装包
+# 产物：forge-x86_64-unknown-linux-gnu.tar.gz
+# 发布：GitHub Releases（公开下载）
 ```
 
-发布完成后，用户可以从 `https://github.com/你的用户名/forge/releases` 下载对应平台的安装包。
+### 构建产物说明
+
+| 触发方式 | 产物后缀 | 下载位置 | 用途 |
+|---------|---------|---------|------|
+| push to dev | `-dev` | Actions Artifacts | 开发测试 |
+| push to main | `-main` | Actions Artifacts | 预发布测试 |
+| push tag | 无后缀 | GitHub Releases | 正式发布 |
+
+所有构建都会生成 4 个平台的二进制文件：
+- Linux x86_64
+- Linux ARM64
+- macOS Intel
+- macOS ARM (M1/M2)
 
 ## 使用
 
