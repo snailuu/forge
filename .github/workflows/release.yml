@@ -1,9 +1,16 @@
-name: Release
+name: Build and Release
 
 on:
   push:
+    branches:
+      - main
+      - dev
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+      - dev
 
 jobs:
   build:
@@ -14,12 +21,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            use_cross: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            use_cross: true
           - os: macos-latest
             target: x86_64-apple-darwin
+            use_cross: false
           - os: macos-latest
             target: aarch64-apple-darwin
+            use_cross: false
 
     steps:
       - uses: actions/checkout@v4
@@ -29,26 +40,46 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Install cross
+        if: matrix.use_cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
-      - name: Build
+      - name: Build with cross
+        if: matrix.use_cross
         run: cross build --release --target ${{ matrix.target }}
+
+      - name: Build with cargo
+        if: ${{ !matrix.use_cross }}
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Determine suffix
+        id: suffix
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "suffix=" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/main ]]; then
+            echo "suffix=-main" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/dev ]]; then
+            echo "suffix=-dev" >> $GITHUB_OUTPUT
+          else
+            echo "suffix=-pr" >> $GITHUB_OUTPUT
+          fi
 
       - name: Package
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf forge-${{ matrix.target }}.tar.gz forge
-          mv forge-${{ matrix.target }}.tar.gz ${{ github.workspace }}
+          tar czf forge-${{ matrix.target }}${{ steps.suffix.outputs.suffix }}.tar.gz forge
+          mv forge-${{ matrix.target }}${{ steps.suffix.outputs.suffix }}.tar.gz ${{ github.workspace }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: forge-${{ matrix.target }}
-          path: forge-${{ matrix.target }}.tar.gz
+          name: forge-${{ matrix.target }}${{ steps.suffix.outputs.suffix }}
+          path: forge-${{ matrix.target }}${{ steps.suffix.outputs.suffix }}.tar.gz
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/download-artifact@v4
 
