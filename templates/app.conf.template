@@ -1,0 +1,106 @@
+# Nginx 应用配置模板
+# 说明：此文件用于定义单个应用的配置
+#
+# 使用步骤：
+# 1. 复制此文件为 /etc/nginx/conf.d/your-app-name.conf
+# 2. 修改下面的配置（server_name、root 等）
+# 3. 重载 Nginx：sudo nginx -t && sudo systemctl reload nginx
+#
+# 示例：
+# - 复制为 /etc/nginx/conf.d/ai-coach.conf
+# - 复制为 /etc/nginx/conf.d/admin-panel.conf
+# - 复制为 /etc/nginx/conf.d/api.conf
+#
+# 主 Nginx 配置会自动加载 /etc/nginx/conf.d/*.conf
+
+server {
+    # ========== 必须修改 ==========
+    listen 80;                              # 监听端口（通常 80，如有多个服务需要不同端口）
+    server_name dev.ai-coach.com;          # ⭐ 改为你的域名或 IP
+
+    # ========== 静态文件托管模式 ==========
+    # 如果是前端 SPA（React/Vue/Angular）应用，使用这个配置
+    root /var/www/ai-coach;                # ⭐ 改为你的应用路径
+    index index.html;
+
+    # ========== 可选：API 代理配置 ==========
+    # 如果前端需要调用后端 API（如 Node.js 服务运行在 3000 端口），取消注释并修改端口
+    # location /api/ {
+    #     proxy_pass http://localhost:3000/;
+    #     proxy_http_version 1.1;
+    #     proxy_set_header Upgrade $http_upgrade;
+    #     proxy_set_header Connection 'upgrade';
+    #     proxy_set_header Host $host;
+    #     proxy_cache_bypass $http_upgrade;
+    # }
+
+    # ========== 可选：WebSocket 支持 ==========
+    # 如果应用需要 WebSocket 连接（如实时通知），取消注释
+    # location /ws {
+    #     proxy_pass http://localhost:3001/;
+    #     proxy_http_version 1.1;
+    #     proxy_set_header Upgrade $http_upgrade;
+    #     proxy_set_header Connection "upgrade";
+    #     proxy_set_header Host $host;
+    #     proxy_read_timeout 86400;
+    # }
+
+    # ========== 可选：将 Node.js 后端完全代理到另一个端口 ==========
+    # 如果整个应用运行在 Node.js 3000 端口，可以这样配置
+    # location / {
+    #     proxy_pass http://localhost:3000/;
+    #     proxy_http_version 1.1;
+    #     proxy_set_header Upgrade $http_upgrade;
+    #     proxy_set_header Connection 'upgrade';
+    #     proxy_set_header Host $host;
+    #     proxy_cache_bypass $http_upgrade;
+    # }
+
+    # ========== SPA 路由支持 ==========
+    # 将所有找不到的请求重定向到 index.html（让前端路由处理）
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # ========== 静态资源缓存 ==========
+    # JS/CSS/图片等长期不变，缓存 1 年
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # ========== 禁止访问隐藏文件 ==========
+    location ~ /\. {
+        deny all;
+    }
+
+    # ========== 禁止访问备份文件 ==========
+    location ~ ~$ {
+        deny all;
+    }
+
+    # ========== 日志文件 ==========
+    # 每个应用的日志单独保存，便于排查问题
+    access_log /var/log/nginx/ai-coach_access.log;
+    error_log /var/log/nginx/ai-coach_error.log warn;
+}
+
+# ========== HTTPS 配置（可选）==========
+# 使用 Let's Encrypt 申请免费证书后，Certbot 会自动添加以下配置
+# （不需要手动添加，Certbot 会自动处理）
+
+# server {
+#     listen 443 ssl http2;
+#     server_name dev.ai-coach.com;
+#
+#     ssl_certificate /etc/letsencrypt/live/dev.ai-coach.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/dev.ai-coach.com/privkey.pem;
+#
+#     # ... 其他配置同上
+# }
+#
+# server {
+#     listen 80;
+#     server_name dev.ai-coach.com;
+#     return 301 https://$server_name$request_uri;
+# }
