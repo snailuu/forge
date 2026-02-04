@@ -1,7 +1,13 @@
 [package]
-name = "forge"
+name = "snailuu-forge"
 version = "0.1.0"
 edition = "2021"
+authors = ["snailuu"]
+description = "Forge 服务器部署工具"
+license = "MIT"
+repository = "https://github.com/snailuu/forge"
+keywords = ["forge", "minecraft", "server", "deploy"]
+categories = ["command-line-utilities"]
 
 [[bin]]
 name = "forge"
