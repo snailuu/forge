@@ -40,6 +40,15 @@ pub fn run(ssh_key: Option<String>) -> Result<()> {
         None
     };
 
+    let server_name = if create_project {
+        Some(Input::<String>::new()
+            .with_prompt("站点域名或 IP")
+            .default("localhost".to_string())
+            .interact_text()?)
+    } else {
+        None
+    };
+
     println!();
 
     nginx::install::install()?;
@@ -84,6 +93,9 @@ pub fn run(ssh_key: Option<String>) -> Result<()> {
             SystemCommand::run_checked("chown", &["-R", &format!("{}:{}", user, user), &project_path])?;
         }
         println!("✓ Project directory created: {}", project_path);
+
+        let server_name = server_name.as_deref().unwrap_or("localhost");
+        nginx::config::install_app_config(name, server_name, &project_path)?;
     }
 
     nginx::install::remove_default_site()?;
