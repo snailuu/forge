@@ -40,7 +40,7 @@ sudo forge init
 
 ```bash
 # 下载最新版本（Linux x86_64）
-wget https://github.com/你的用户名/forge/releases/latest/download/forge-x86_64-unknown-linux-gnu.tar.gz
+wget https://github.com/snailuu/forge/releases/latest/download/forge-x86_64-unknown-linux-gnu.tar.gz
 
 # 解压
 tar xzf forge-x86_64-unknown-linux-gnu.tar.gz
@@ -70,23 +70,23 @@ sudo cp target/release/forge /usr/local/bin/
 ### 开发分支构建（dev）
 
 ```bash
-# 推送到 dev 分支会自动构建
+# 推送到 dev 分支会自动构建并发布
 git checkout dev
 git push origin dev
 
-# 产物：forge-x86_64-unknown-linux-gnu-dev.tar.gz
-# 下载：GitHub Actions -> Artifacts
+# 下载最新 dev 构建
+wget https://github.com/snailuu/forge/releases/download/dev-latest/forge-x86_64-unknown-linux-gnu.tar.gz
 ```
 
 ### 主分支构建（main）
 
 ```bash
-# 推送到 main 分支会自动构建
+# 推送到 main 分支会自动构建并发布
 git checkout main
 git push origin main
 
-# 产物：forge-x86_64-unknown-linux-gnu-main.tar.gz
-# 下载：GitHub Actions -> Artifacts
+# 下载最新 main 构建
+wget https://github.com/snailuu/forge/releases/download/main-latest/forge-x86_64-unknown-linux-gnu.tar.gz
 ```
 
 ### 正式版本发布（tag）
@@ -102,11 +102,11 @@ git push origin v0.1.0
 
 ### 构建产物说明
 
-| 触发方式 | 产物后缀 | 下载位置 | 用途 |
-|---------|---------|---------|------|
-| push to dev | `-dev` | Actions Artifacts | 开发测试 |
-| push to main | `-main` | Actions Artifacts | 预发布测试 |
-| push tag | 无后缀 | GitHub Releases | 正式发布 |
+| 触发方式     | Release Tag  | 下载位置                     | 用途       |
+| ------------ | ------------ | ---------------------------- | ---------- |
+| push to dev  | `dev-latest` | GitHub Releases (prerelease) | 开发测试   |
+| push to main | `main-latest`| GitHub Releases (prerelease) | 预发布测试 |
+| push tag     | tag 名称     | GitHub Releases              | 正式发布   |
 
 所有构建都会生成 4 个平台的二进制文件：
 - Linux x86_64
