@@ -202,9 +202,11 @@ $ sudo forge init
   Server Initialization
 ==========================================
 
-Deploy user name [deploy]: myapp
+Create deploy user? [y/N]: y
+User name [deploy]: myapp
 Create project directory in /var/www? [y/N]: y
 Project name: myapp
+Add SSH public key for passwordless login? [y/N]: n
 
 📦 Updating package list...
 📦 Installing nginx...

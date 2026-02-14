@@ -61,7 +61,7 @@ pub fn run(
     // 域名配置
     let server_name = if project_name.is_some() {
         // 如果创建了项目，使用提供的 domain 参数
-        domain.clone()
+        domain
     } else {
         // 如果没有创建项目，域名无意义，使用默认值
         if domain != "localhost" {
