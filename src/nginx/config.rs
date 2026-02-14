@@ -26,7 +26,7 @@ pub fn install_app_config(project_name: &str, server_name: &str, project_root: &
     Ok(())
 }
 
-fn validate_project_name(name: &str) -> Result<()> {
+pub fn validate_project_name(name: &str) -> Result<()> {
     if name.is_empty() {
         bail!("项目名称不能为空");
     }

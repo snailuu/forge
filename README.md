@@ -225,6 +225,7 @@ Add SSH public key for passwordless login? [y/N]: n
 Deploy user: myapp
 Web root: /var/www
 Project directory: /var/www/myapp
+Server name: localhost
 ```
 
 ## 开发

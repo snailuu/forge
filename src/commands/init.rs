@@ -1,20 +1,7 @@
 use crate::{nginx, system::SystemCommand, user::DeployUser};
-use anyhow::{Result, bail};
+use anyhow::Result;
 use colored::Colorize;
 use dialoguer::{Input, Confirm};
-
-fn validate_project_name(name: &str) -> Result<()> {
-    if name.is_empty() {
-        bail!("Project name cannot be empty");
-    }
-    if name.contains('/') || name.contains('\\') {
-        bail!("Project name cannot contain path separators");
-    }
-    if name == "." || name == ".." {
-        bail!("Project name cannot be '.' or '..'");
-    }
-    Ok(())
-}
 
 pub fn run(
     user: Option<String>,
@@ -54,7 +41,7 @@ pub fn run(
     // 项目创建逻辑
     let project_name = if let Some(name) = project {
         // 命令行参数提供了项目名，验证后使用
-        validate_project_name(&name)?;
+        nginx::config::validate_project_name(&name)?;
         Some(name)
     } else {
         // 交互式询问
@@ -67,7 +54,7 @@ pub fn run(
             let name = Input::<String>::new()
                 .with_prompt("Project name")
                 .interact_text()?;
-            validate_project_name(&name)?;
+            nginx::config::validate_project_name(&name)?;
             Some(name)
         } else {
             None
