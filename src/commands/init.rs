@@ -61,9 +61,12 @@ pub fn run(
     // 域名配置
     let server_name = if project_name.is_some() {
         // 如果创建了项目，使用提供的 domain 参数
-        domain
+        domain.clone()
     } else {
         // 如果没有创建项目，域名无意义，使用默认值
+        if domain != "localhost" {
+            println!("{}", "⚠ --domain provided but no project created, domain was ignored".yellow());
+        }
         "localhost".to_string()
     };
 
@@ -94,8 +97,11 @@ pub fn run(
 
         DeployUser::setup_ssh(user, ssh_key_to_use)?;
 
-        SystemCommand::run_checked("chown", &["-R", &format!("{}:{}", user, user), "/var/www"])?;
+        // 确保 /var/www 目录存在
+        std::fs::create_dir_all("/var/www")?;
         println!("✓ Web directory configured");
+    } else if let Some(_) = ssh_key {
+        println!("{}", "⚠ --ssh-key provided but no user created, SSH key was ignored".yellow());
     }
 
     if let Some(name) = &project_name {
