@@ -40,7 +40,7 @@ sudo forge init
 
 ```bash
 # 下载最新版本（Linux x86_64）
-wget https://github.com/你的用户名/forge/releases/latest/download/forge-x86_64-unknown-linux-gnu.tar.gz
+wget https://github.com/snailuu/forge/releases/latest/download/forge-x86_64-unknown-linux-gnu.tar.gz
 
 # 解压
 tar xzf forge-x86_64-unknown-linux-gnu.tar.gz
@@ -70,23 +70,23 @@ sudo cp target/release/forge /usr/local/bin/
 ### 开发分支构建（dev）
 
 ```bash
-# 推送到 dev 分支会自动构建
+# 推送到 dev 分支会自动构建并发布
 git checkout dev
 git push origin dev
 
-# 产物：forge-x86_64-unknown-linux-gnu-dev.tar.gz
-# 下载：GitHub Actions -> Artifacts
+# 下载最新 dev 构建
+wget https://github.com/snailuu/forge/releases/download/dev-latest/forge-x86_64-unknown-linux-gnu.tar.gz
 ```
 
 ### 主分支构建（main）
 
 ```bash
-# 推送到 main 分支会自动构建
+# 推送到 main 分支会自动构建并发布
 git checkout main
 git push origin main
 
-# 产物：forge-x86_64-unknown-linux-gnu-main.tar.gz
-# 下载：GitHub Actions -> Artifacts
+# 下载最新 main 构建
+wget https://github.com/snailuu/forge/releases/download/main-latest/forge-x86_64-unknown-linux-gnu.tar.gz
 ```
 
 ### 正式版本发布（tag）
@@ -102,11 +102,11 @@ git push origin v0.1.0
 
 ### 构建产物说明
 
-| 触发方式 | 产物后缀 | 下载位置 | 用途 |
-|---------|---------|---------|------|
-| push to dev | `-dev` | Actions Artifacts | 开发测试 |
-| push to main | `-main` | Actions Artifacts | 预发布测试 |
-| push tag | 无后缀 | GitHub Releases | 正式发布 |
+| 触发方式     | Release Tag  | 下载位置                     | 用途       |
+| ------------ | ------------ | ---------------------------- | ---------- |
+| push to dev  | `dev-latest` | GitHub Releases (prerelease) | 开发测试   |
+| push to main | `main-latest`| GitHub Releases (prerelease) | 预发布测试 |
+| push tag     | tag 名称     | GitHub Releases              | 正式发布   |
 
 所有构建都会生成 4 个平台的二进制文件：
 - Linux x86_64
@@ -116,21 +116,46 @@ git push origin v0.1.0
 
 ## 使用
 
+### 命令参数
+
+```bash
+forge init [OPTIONS]
+
+Options:
+  --user <USER>          部署用户名（可选，不提供则交互式询问）
+  --project <PROJECT>    项目名称（可选，不提供则交互式询问）
+  --domain <DOMAIN>      站点域名或 IP 地址（默认：localhost）
+  --ssh-key <SSH_KEY>    SSH 公钥（可选，不提供则交互式询问）
+  -h, --help             显示帮助信息
+```
+
 ### 初始化服务器
 
 ```bash
-# 交互式初始化
+# 交互式初始化（推荐）
 sudo forge init
 
-# 带 SSH 密钥初始化
-sudo forge init --ssh-key "ssh-ed25519 AAAA..."
+# 完全自动化初始化
+sudo forge init \
+  --user deploy \
+  --project myapp \
+  --domain example.com \
+  --ssh-key "ssh-ed25519 AAAA..."
+
+# 仅创建用户和配置 SSH（其他选项交互式询问）
+sudo forge init --user deploy --ssh-key "ssh-ed25519 AAAA..."
+
+# 创建项目目录并配置 nginx（其他选项交互式询问）
+sudo forge init --project myapp --domain example.com
 ```
 
-初始化过程会询问：
-1. **是否使用默认用户名 deploy**
-2. **是否创建项目目录**（默认：否）
-3. **项目名称**（如果选择创建）
-4. **是否添加 SSH 公钥**（如果命令行未提供）
+初始化过程（未提供参数时）会询问：
+1. **是否创建部署用户**（如果未提供 --user）
+2. **是否创建项目目录**（如果未提供 --project）
+3. **项目名称**（如果选择创建项目）
+4. **是否添加 SSH 公钥**（如果未提供 --ssh-key）
+
+**注意**：提供命令行参数时会跳过对应的交互式询问。
 
 初始化会执行：
 1. 检查系统平台（仅支持 Linux）
@@ -177,9 +202,11 @@ $ sudo forge init
   Server Initialization
 ==========================================
 
-Deploy user name [deploy]: myapp
+Create deploy user? [y/N]: y
+User name [deploy]: myapp
 Create project directory in /var/www? [y/N]: y
 Project name: myapp
+Add SSH public key for passwordless login? [y/N]: n
 
 📦 Updating package list...
 📦 Installing nginx...
@@ -198,6 +225,7 @@ Project name: myapp
 Deploy user: myapp
 Web root: /var/www
 Project directory: /var/www/myapp
+Server name: localhost
 ```
 
 ## 开发
@@ -208,9 +236,6 @@ cargo build
 
 # 运行
 cargo run -- init --ssh-key "..."
-
-# 测试
-cargo test
 ```
 
 ## 交叉编译（macOS -> Linux）

@@ -34,3 +34,6 @@ yarn-error.log*
 *.tmp
 *.temp
 .cache/
+
+# Serena AI assistant files
+.serena

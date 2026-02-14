@@ -1,5 +1,9 @@
 # Nginx 应用配置模板
 # 说明：此文件用于定义单个应用的配置
+# 初始化时会替换以下占位符：
+# - {{PROJECT_NAME}}   项目名称
+# - {{PROJECT_ROOT}}   项目根目录
+# - {{SERVER_NAME}}    域名或 IP
 #
 # 使用步骤：
 # 1. 复制此文件为 /etc/nginx/conf.d/your-app-name.conf
@@ -16,32 +20,44 @@
 server {
     # ========== 必须修改 ==========
     listen 80;                              # 监听端口（通常 80，如有多个服务需要不同端口）
-    server_name dev.ai-coach.com;          # ⭐ 改为你的域名或 IP
+    server_name {{SERVER_NAME}};           # ⭐ 可按需修改
 
     # ========== 静态文件托管模式 ==========
     # 如果是前端 SPA（React/Vue/Angular）应用，使用这个配置
-    root /var/www/ai-coach;                # ⭐ 改为你的应用路径
+    root {{PROJECT_ROOT}};                 # ⭐ 可按需修改
     index index.html;
 
-    # ========== 可选：API 代理配置 ==========
-    # 如果前端需要调用后端 API（如 Node.js 服务运行在 3000 端口），取消注释并修改端口
-    # location /api/ {
-    #     proxy_pass http://localhost:3000/;
-    #     proxy_http_version 1.1;
-    #     proxy_set_header Upgrade $http_upgrade;
-    #     proxy_set_header Connection 'upgrade';
-    #     proxy_set_header Host $host;
-    #     proxy_cache_bypass $http_upgrade;
-    # }
+    # ========== API 代理配置（包含 WebSocket 支持）==========
+    # 默认保留 /api 前缀，如需剥离 /api，可改为：proxy_pass http://localhost:3000/;
+    location /api/ {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
 
-    # ========== 可选：WebSocket 支持 ==========
+        # WebSocket 支持
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        # 标准代理头
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket 超时设置
+        proxy_read_timeout 86400;
+    }
+
+    # ========== 可选：WebSocket 支持（独立 WS 路径）==========
     # 如果应用需要 WebSocket 连接（如实时通知），取消注释
     # location /ws {
     #     proxy_pass http://localhost:3001/;
     #     proxy_http_version 1.1;
     #     proxy_set_header Upgrade $http_upgrade;
-    #     proxy_set_header Connection "upgrade";
+    #     proxy_set_header Connection $connection_upgrade;
     #     proxy_set_header Host $host;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
     #     proxy_read_timeout 86400;
     # }
 
@@ -51,9 +67,12 @@ server {
     #     proxy_pass http://localhost:3000/;
     #     proxy_http_version 1.1;
     #     proxy_set_header Upgrade $http_upgrade;
-    #     proxy_set_header Connection 'upgrade';
+    #     proxy_set_header Connection $connection_upgrade;
     #     proxy_set_header Host $host;
-    #     proxy_cache_bypass $http_upgrade;
+    #     proxy_set_header X-Real-IP $remote_addr;
+    #     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    #     proxy_set_header X-Forwarded-Proto $scheme;
+    #     proxy_read_timeout 86400;
     # }
 
     # ========== SPA 路由支持 ==========
@@ -81,8 +100,8 @@ server {
 
     # ========== 日志文件 ==========
     # 每个应用的日志单独保存，便于排查问题
-    access_log /var/log/nginx/ai-coach_access.log;
-    error_log /var/log/nginx/ai-coach_error.log warn;
+    access_log /var/log/nginx/{{PROJECT_NAME}}_access.log;
+    error_log /var/log/nginx/{{PROJECT_NAME}}_error.log warn;
 }
 
 # ========== HTTPS 配置（可选）==========
