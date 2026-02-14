@@ -33,6 +33,9 @@ pub fn validate_project_name(name: &str) -> Result<()> {
     if name.len() > 64 {
         bail!("Project name too long (max 64 characters)");
     }
+    if !name.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        bail!("Project name must start with a letter");
+    }
     if !name
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
@@ -72,12 +75,12 @@ fn validate_project_root(path: &str) -> Result<()> {
     }
     let parsed = Path::new(path);
     if !parsed.is_absolute() {
-        bail!("项目根目录必须是绝对路径");
+        bail!("Project root must be an absolute path");
     }
     for component in parsed.components() {
         match component {
             std::path::Component::RootDir | std::path::Component::Normal(_) => {}
-            _ => bail!("项目根目录不允许包含 . 或 .."),
+            _ => bail!("Project root must not contain '.' or '..' components"),
         }
     }
     Ok(())
