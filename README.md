@@ -116,14 +116,37 @@ git push origin v0.1.0
 
 ## 使用
 
+### 命令参数
+
+```bash
+forge init [OPTIONS]
+
+Options:
+  --user <USER>          部署用户名（可选，不提供则交互式询问）
+  --project <PROJECT>    项目名称（可选，不提供则交互式询问）
+  --domain <DOMAIN>      站点域名或 IP 地址（默认：localhost）
+  --ssh-key <SSH_KEY>    SSH 公钥（可选，不提供则交互式询问）
+  -h, --help             显示帮助信息
+```
+
 ### 初始化服务器
 
 ```bash
-# 交互式初始化
+# 交互式初始化（推荐）
 sudo forge init
 
-# 带 SSH 密钥初始化
-sudo forge init --ssh-key "ssh-ed25519 AAAA..."
+# 完全自动化初始化
+sudo forge init \
+  --user deploy \
+  --project myapp \
+  --domain example.com \
+  --ssh-key "ssh-ed25519 AAAA..."
+
+# 仅创建用户和配置 SSH
+sudo forge init --user deploy --ssh-key "ssh-ed25519 AAAA..."
+
+# 仅创建项目目录
+sudo forge init --project myapp --domain example.com
 ```
 
 初始化过程会询问：
@@ -208,9 +231,6 @@ cargo build
 
 # 运行
 cargo run -- init --ssh-key "..."
-
-# 测试
-cargo test
 ```
 
 ## 交叉编译（macOS -> Linux）
