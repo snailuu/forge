@@ -28,47 +28,47 @@ pub fn install_app_config(project_name: &str, server_name: &str, project_root: &
 
 pub fn validate_project_name(name: &str) -> Result<()> {
     if name.is_empty() {
-        bail!("项目名称不能为空");
+        bail!("Project name cannot be empty");
     }
     if name.len() > 64 {
-        bail!("项目名称过长（最多 64 个字符）");
+        bail!("Project name too long (max 64 characters)");
     }
     if !name
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
-        bail!("项目名称仅允许字母、数字、-、_");
+        bail!("Project name can only contain letters, numbers, -, _");
     }
     Ok(())
 }
 
 fn validate_server_name(value: &str) -> Result<()> {
     if value.is_empty() {
-        bail!("站点域名或 IP 不能为空");
+        bail!("Server domain or IP cannot be empty");
     }
     if value.len() > 253 {
-        bail!("站点域名或 IP 过长");
+        bail!("Server domain or IP too long");
     }
     if !value.chars().all(|c| {
         c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_' || c == ':' || c == '*'
     }) {
-        bail!("站点域名或 IP 仅允许字母、数字、.、-、_、:、*");
+        bail!("Server domain or IP can only contain letters, numbers, ., -, _, :, *");
     }
     Ok(())
 }
 
 fn validate_project_root(path: &str) -> Result<()> {
     if path.is_empty() {
-        bail!("项目根目录不能为空");
+        bail!("Project root cannot be empty");
     }
     if path.len() > 512 {
-        bail!("项目根目录过长");
+        bail!("Project root too long");
     }
     if !path
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '/' || c == '.' || c == '-' || c == '_')
     {
-        bail!("项目根目录仅允许字母、数字、/、.、-、_");
+        bail!("Project root can only contain letters, numbers, /, ., -, _");
     }
     let parsed = Path::new(path);
     if !parsed.is_absolute() {
