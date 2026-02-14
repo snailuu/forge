@@ -1,7 +1,20 @@
 use crate::{nginx, system::SystemCommand, user::DeployUser};
-use anyhow::Result;
+use anyhow::{Result, bail};
 use colored::Colorize;
 use dialoguer::{Input, Confirm};
+
+fn validate_project_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        bail!("Project name cannot be empty");
+    }
+    if name.contains('/') || name.contains('\\') {
+        bail!("Project name cannot contain path separators");
+    }
+    if name == "." || name == ".." {
+        bail!("Project name cannot be '.' or '..'");
+    }
+    Ok(())
+}
 
 pub fn run(
     user: Option<String>,
@@ -40,7 +53,8 @@ pub fn run(
 
     // 项目创建逻辑
     let project_name = if let Some(name) = project {
-        // 命令行参数提供了项目名，直接使用
+        // 命令行参数提供了项目名，验证后使用
+        validate_project_name(&name)?;
         Some(name)
     } else {
         // 交互式询问
@@ -50,9 +64,11 @@ pub fn run(
             .interact()?;
 
         if create_project {
-            Some(Input::<String>::new()
+            let name = Input::<String>::new()
                 .with_prompt("Project name")
-                .interact_text()?)
+                .interact_text()?;
+            validate_project_name(&name)?;
+            Some(name)
         } else {
             None
         }
@@ -115,6 +131,8 @@ pub fn run(
 
         if let Some(ref user) = username {
             SystemCommand::run_checked("chown", &["-R", &format!("{}:{}", user, user), &project_path])?;
+        } else {
+            println!("{}", "⚠ No deploy user specified, project directory is owned by root".yellow());
         }
         println!("✓ Project directory created: {}", project_path);
 
@@ -136,6 +154,7 @@ pub fn run(
     println!("Web root: /var/www");
     if let Some(name) = project_name {
         println!("Project directory: /var/www/{}", name);
+        println!("Server name: {}", server_name);
     }
     println!();
 

@@ -142,10 +142,10 @@ sudo forge init \
   --domain example.com \
   --ssh-key "ssh-ed25519 AAAA..."
 
-# 仅创建用户和配置 SSH
+# 仅创建用户和配置 SSH（其他选项交互式询问）
 sudo forge init --user deploy --ssh-key "ssh-ed25519 AAAA..."
 
-# 创建项目目录并配置 nginx
+# 创建项目目录并配置 nginx（其他选项交互式询问）
 sudo forge init --project myapp --domain example.com
 ```
 
