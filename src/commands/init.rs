@@ -3,7 +3,12 @@ use anyhow::Result;
 use colored::Colorize;
 use dialoguer::{Input, Confirm};
 
-pub fn run(ssh_key: Option<String>) -> Result<()> {
+pub fn run(
+    user: Option<String>,
+    project: Option<String>,
+    domain: String,
+    ssh_key: Option<String>,
+) -> Result<()> {
     println!("{}", "==========================================".cyan());
     println!("{}", "  Server Initialization".cyan().bold());
     println!("{}", "==========================================".cyan());
@@ -12,41 +17,60 @@ pub fn run(ssh_key: Option<String>) -> Result<()> {
     SystemCommand::check_linux()?;
     SystemCommand::check_root()?;
 
-    // 交互式配置
-    let create_user = Confirm::new()
-        .with_prompt("Create deploy user?")
-        .default(false)
-        .interact()?;
-
-    let username = if create_user {
-        Some(Input::<String>::new()
-            .with_prompt("User name")
-            .default("deploy".to_string())
-            .interact_text()?)
+    // 用户创建逻辑
+    let username = if let Some(name) = user {
+        // 命令行参数提供了用户名，直接使用
+        Some(name)
     } else {
-        None
+        // 交互式询问
+        let create_user = Confirm::new()
+            .with_prompt("Create deploy user?")
+            .default(false)
+            .interact()?;
+
+        if create_user {
+            Some(Input::<String>::new()
+                .with_prompt("User name")
+                .default("deploy".to_string())
+                .interact_text()?)
+        } else {
+            None
+        }
     };
 
-    let create_project = Confirm::new()
-        .with_prompt("Create project directory in /var/www?")
-        .default(false)
-        .interact()?;
-
-    let project_name = if create_project {
-        Some(Input::<String>::new()
-            .with_prompt("Project name")
-            .interact_text()?)
+    // 项目创建逻辑
+    let project_name = if let Some(name) = project {
+        // 命令行参数提供了项目名，验证后使用
+        nginx::config::validate_project_name(&name)?;
+        Some(name)
     } else {
-        None
+        // 交互式询问
+        let create_project = Confirm::new()
+            .with_prompt("Create project directory in /var/www?")
+            .default(false)
+            .interact()?;
+
+        if create_project {
+            let name = Input::<String>::new()
+                .with_prompt("Project name")
+                .interact_text()?;
+            nginx::config::validate_project_name(&name)?;
+            Some(name)
+        } else {
+            None
+        }
     };
 
-    let server_name = if create_project {
-        Some(Input::<String>::new()
-            .with_prompt("站点域名或 IP")
-            .default("localhost".to_string())
-            .interact_text()?)
+    // 域名配置
+    let server_name = if project_name.is_some() {
+        // 如果创建了项目，使用提供的 domain 参数
+        domain
     } else {
-        None
+        // 如果没有创建项目，域名无意义，使用默认值
+        if domain != "localhost" {
+            println!("{}", "⚠ --domain provided but no project created, domain was ignored".yellow());
+        }
+        "localhost".to_string()
     };
 
     println!();
@@ -76,8 +100,11 @@ pub fn run(ssh_key: Option<String>) -> Result<()> {
 
         DeployUser::setup_ssh(user, ssh_key_to_use)?;
 
-        SystemCommand::run_checked("chown", &["-R", &format!("{}:{}", user, user), "/var/www"])?;
+        // 确保 /var/www 目录存在
+        std::fs::create_dir_all("/var/www")?;
         println!("✓ Web directory configured");
+    } else if let Some(_) = ssh_key {
+        println!("{}", "⚠ --ssh-key provided but no user created, SSH key was ignored".yellow());
     }
 
     if let Some(name) = &project_name {
@@ -91,11 +118,12 @@ pub fn run(ssh_key: Option<String>) -> Result<()> {
 
         if let Some(ref user) = username {
             SystemCommand::run_checked("chown", &["-R", &format!("{}:{}", user, user), &project_path])?;
+        } else {
+            println!("{}", "⚠ No deploy user specified, project directory is owned by root".yellow());
         }
         println!("✓ Project directory created: {}", project_path);
 
-        let server_name = server_name.as_deref().unwrap_or("localhost");
-        nginx::config::install_app_config(name, server_name, &project_path)?;
+        nginx::config::install_app_config(name, &server_name, &project_path)?;
     }
 
     nginx::install::remove_default_site()?;
@@ -113,6 +141,7 @@ pub fn run(ssh_key: Option<String>) -> Result<()> {
     println!("Web root: /var/www");
     if let Some(name) = project_name {
         println!("Project directory: /var/www/{}", name);
+        println!("Server name: {}", server_name);
     }
     println!();
 
