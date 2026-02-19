@@ -101,7 +101,7 @@ pub fn run(
             if add_ssh_key {
                 Some(
                     Input::<String>::new()
-                        .with_prompt("SSH public key (ssh-rsa/ssh-ed25519/ssh-ecdsa)")
+                        .with_prompt("SSH public key (ssh-rsa/ssh-ed25519/ecdsa-sha2-nistp256)")
                         .interact_text()?,
                 )
             } else {
@@ -142,12 +142,14 @@ pub fn run(
             );
         }
         println!("✓ Project directory created: {}", project_path);
-
-        nginx::config::install_app_config(name, &server_name, &project_path)?;
     }
 
     nginx::install::remove_default_site()?;
     nginx::config::install_main_config()?;
+    if let Some(name) = &project_name {
+        let project_path = format!("/var/www/{}", name);
+        nginx::config::install_app_config(name, &server_name, &project_path)?;
+    }
     nginx::install::enable_and_start()?;
 
     println!();

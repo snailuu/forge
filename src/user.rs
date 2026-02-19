@@ -2,15 +2,13 @@ use crate::system::SystemCommand;
 use anyhow::{bail, Context, Result};
 use regex::Regex;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 pub struct DeployUser;
 
 impl DeployUser {
     pub fn create(username: &str) -> Result<()> {
-        Self::validate_username(username)?;
-
         if Self::exists(username)? {
             println!("✓ User '{}' already exists", username);
             return Ok(());
@@ -25,8 +23,6 @@ impl DeployUser {
     }
 
     pub fn setup_ssh(username: &str, public_key: Option<String>) -> Result<()> {
-        Self::validate_username(username)?;
-
         let user_home = Self::find_home_dir(username)?;
         let ssh_dir = user_home.join(".ssh");
         let auth_keys = ssh_dir.join("authorized_keys");
@@ -53,14 +49,14 @@ impl DeployUser {
         Ok(())
     }
 
-    fn add_ssh_key(key: &str, auth_keys: &PathBuf) -> Result<()> {
+    fn add_ssh_key(key: &str, auth_keys: &Path) -> Result<()> {
         let key = key.trim();
         if key.contains('\n') || key.contains('\r') {
             bail!("Invalid SSH key format. SSH key must be a single line");
         }
         if !ssh_key_regex().is_match(key) {
             anyhow::bail!(
-                "Invalid SSH key format. Must be a valid ssh-rsa, ssh-ed25519, or ecdsa key"
+                "Invalid SSH key format. Must be ssh-rsa, ssh-ed25519, or ecdsa-sha2-nistp256/384/521"
             );
         }
 
@@ -125,7 +121,7 @@ fn ssh_key_regex() -> &'static Regex {
     static SSH_KEY_RE: OnceLock<Regex> = OnceLock::new();
     SSH_KEY_RE.get_or_init(|| {
         Regex::new(
-            r"^(ssh-rsa|ssh-ed25519|ssh-ecdsa|ecdsa-sha2-nistp(?:256|384|521)) [A-Za-z0-9+/]+={0,3}( [^\r\n]+)?$",
+            r"^(ssh-rsa|ssh-ed25519|ecdsa-sha2-nistp(?:256|384|521)) [A-Za-z0-9+/]+={0,3}( [^\r\n]+)?$",
         )
         .expect("ssh key regex must be valid")
     })
@@ -146,5 +142,18 @@ mod tests {
         assert!(DeployUser::validate_username("-bad").is_err());
         assert!(DeployUser::validate_username("BadUpper").is_err());
         assert!(DeployUser::validate_username("name with space").is_err());
+    }
+
+    #[test]
+    fn validate_username_covers_boundary_cases() {
+        assert!(DeployUser::validate_username("").is_err());
+
+        let username_32 = format!("a{}", "b".repeat(31));
+        let username_33 = format!("a{}", "b".repeat(32));
+        assert_eq!(username_32.len(), 32);
+        assert_eq!(username_33.len(), 33);
+        assert!(DeployUser::validate_username(&username_32).is_ok());
+        assert!(DeployUser::validate_username(&username_33).is_err());
+        assert!(DeployUser::validate_username("_apt").is_ok());
     }
 }

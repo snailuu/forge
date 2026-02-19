@@ -102,16 +102,35 @@ fn write_with_validation(path: &Path, content: &str) -> Result<()> {
         .with_context(|| format!("Failed to write config: {}", path.display()))?;
 
     if let Err(test_error) = crate::nginx::install::test_config() {
+        let mut follow_up_error: Option<String> = None;
+
         if existed {
-            fs::copy(&backup_path, path)
-                .with_context(|| format!("Failed to rollback config: {}", path.display()))?;
+            if let Err(rollback_error) = fs::copy(&backup_path, path) {
+                follow_up_error = Some(format!("rollback failed: {}", rollback_error));
+            }
         } else if path.exists() {
-            fs::remove_file(path)
-                .with_context(|| format!("Failed to remove invalid config: {}", path.display()))?;
+            if let Err(cleanup_error) = fs::remove_file(path) {
+                follow_up_error = Some(format!("cleanup failed: {}", cleanup_error));
+            }
         }
 
         if existed && backup_path.exists() {
-            let _ = fs::remove_file(&backup_path);
+            if let Err(backup_cleanup_error) = fs::remove_file(&backup_path) {
+                let msg = format!("backup cleanup failed: {}", backup_cleanup_error);
+                follow_up_error = Some(match follow_up_error {
+                    Some(existing) => format!("{}; {}", existing, msg),
+                    None => msg,
+                });
+            }
+        }
+
+        if let Some(extra_error) = follow_up_error {
+            bail!(
+                "Nginx config test failed for {}: {}. Additionally, {}",
+                path.display(),
+                test_error,
+                extra_error
+            );
         }
 
         bail!(
@@ -122,8 +141,7 @@ fn write_with_validation(path: &Path, content: &str) -> Result<()> {
     }
 
     if existed && backup_path.exists() {
-        fs::remove_file(&backup_path)
-            .with_context(|| format!("Failed to clean backup file: {}", backup_path.display()))?;
+        let _ = fs::remove_file(&backup_path);
     }
 
     Ok(())
