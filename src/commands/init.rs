@@ -1,7 +1,7 @@
 use crate::{nginx, system::SystemCommand, user::DeployUser};
 use anyhow::Result;
 use colored::Colorize;
-use dialoguer::{Input, Confirm};
+use dialoguer::{Confirm, Input};
 
 pub fn run(
     user: Option<String>,
@@ -29,10 +29,12 @@ pub fn run(
             .interact()?;
 
         if create_user {
-            Some(Input::<String>::new()
-                .with_prompt("User name")
-                .default("deploy".to_string())
-                .interact_text()?)
+            Some(
+                Input::<String>::new()
+                    .with_prompt("User name")
+                    .default("deploy".to_string())
+                    .interact_text()?,
+            )
         } else {
             None
         }
@@ -68,10 +70,17 @@ pub fn run(
     } else {
         // 如果没有创建项目，域名无意义，使用默认值
         if domain != "localhost" {
-            println!("{}", "⚠ --domain provided but no project created, domain was ignored".yellow());
+            println!(
+                "{}",
+                "⚠ --domain provided but no project created, domain was ignored".yellow()
+            );
         }
         "localhost".to_string()
     };
+
+    if let Some(ref user) = username {
+        DeployUser::validate_username(user)?;
+    }
 
     println!();
 
@@ -90,9 +99,11 @@ pub fn run(
                 .interact()?;
 
             if add_ssh_key {
-                Some(Input::<String>::new()
-                    .with_prompt("SSH public key (ssh-rsa/ssh-ed25519/ssh-ecdsa)")
-                    .interact_text()?)
+                Some(
+                    Input::<String>::new()
+                        .with_prompt("SSH public key (ssh-rsa/ssh-ed25519/ecdsa-sha2-nistp256)")
+                        .interact_text()?,
+                )
             } else {
                 None
             }
@@ -103,8 +114,11 @@ pub fn run(
         // 确保 /var/www 目录存在
         std::fs::create_dir_all("/var/www")?;
         println!("✓ Web directory configured");
-    } else if let Some(_) = ssh_key {
-        println!("{}", "⚠ --ssh-key provided but no user created, SSH key was ignored".yellow());
+    } else if ssh_key.is_some() {
+        println!(
+            "{}",
+            "⚠ --ssh-key provided but no user created, SSH key was ignored".yellow()
+        );
     }
 
     if let Some(name) = &project_name {
@@ -117,17 +131,25 @@ pub fn run(
         std::fs::write(format!("{}/index.html", project_path), index_html)?;
 
         if let Some(ref user) = username {
-            SystemCommand::run_checked("chown", &["-R", &format!("{}:{}", user, user), &project_path])?;
+            SystemCommand::run_checked(
+                "chown",
+                &["-R", &format!("{}:{}", user, user), &project_path],
+            )?;
         } else {
-            println!("{}", "⚠ No deploy user specified, project directory is owned by root".yellow());
+            println!(
+                "{}",
+                "⚠ No deploy user specified, project directory is owned by root".yellow()
+            );
         }
         println!("✓ Project directory created: {}", project_path);
-
-        nginx::config::install_app_config(name, &server_name, &project_path)?;
     }
 
     nginx::install::remove_default_site()?;
     nginx::config::install_main_config()?;
+    if let Some(name) = &project_name {
+        let project_path = format!("/var/www/{}", name);
+        nginx::config::install_app_config(name, &server_name, &project_path)?;
+    }
     nginx::install::enable_and_start()?;
 
     println!();

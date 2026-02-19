@@ -1,9 +1,12 @@
-use anyhow::{bail, Result};
-use std::{fs, path::Path};
+use anyhow::{bail, Context, Result};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 pub fn install_main_config() -> Result<()> {
     let config = crate::template::get_template("nginx.conf")?;
-    fs::write("/etc/nginx/nginx.conf", config)?;
+    write_with_validation(Path::new("/etc/nginx/nginx.conf"), &config)?;
     println!("✓ Nginx main config installed");
     Ok(())
 }
@@ -20,9 +23,9 @@ pub fn install_app_config(project_name: &str, server_name: &str, project_root: &
         .replace("{{SERVER_NAME}}", server_name);
 
     fs::create_dir_all("/etc/nginx/conf.d")?;
-    let conf_path = format!("/etc/nginx/conf.d/{}.conf", project_name);
-    fs::write(&conf_path, config)?;
-    println!("✓ Nginx app config installed: {}", conf_path);
+    let conf_path = PathBuf::from(format!("/etc/nginx/conf.d/{}.conf", project_name));
+    write_with_validation(&conf_path, &config)?;
+    println!("✓ Nginx app config installed: {}", conf_path.display());
     Ok(())
 }
 
@@ -83,5 +86,63 @@ fn validate_project_root(path: &str) -> Result<()> {
             _ => bail!("Project root must not contain '.' or '..' components"),
         }
     }
+    Ok(())
+}
+
+fn write_with_validation(path: &Path, content: &str) -> Result<()> {
+    let backup_path = PathBuf::from(format!("{}.forge.bak", path.display()));
+    let existed = path.exists();
+
+    if existed {
+        fs::copy(path, &backup_path)
+            .with_context(|| format!("Failed to backup config: {}", path.display()))?;
+    }
+
+    fs::write(path, content)
+        .with_context(|| format!("Failed to write config: {}", path.display()))?;
+
+    if let Err(test_error) = crate::nginx::install::test_config() {
+        let mut follow_up_error: Option<String> = None;
+
+        if existed {
+            if let Err(rollback_error) = fs::copy(&backup_path, path) {
+                follow_up_error = Some(format!("rollback failed: {}", rollback_error));
+            }
+        } else if path.exists() {
+            if let Err(cleanup_error) = fs::remove_file(path) {
+                follow_up_error = Some(format!("cleanup failed: {}", cleanup_error));
+            }
+        }
+
+        if existed && backup_path.exists() {
+            if let Err(backup_cleanup_error) = fs::remove_file(&backup_path) {
+                let msg = format!("backup cleanup failed: {}", backup_cleanup_error);
+                follow_up_error = Some(match follow_up_error {
+                    Some(existing) => format!("{}; {}", existing, msg),
+                    None => msg,
+                });
+            }
+        }
+
+        if let Some(extra_error) = follow_up_error {
+            bail!(
+                "Nginx config test failed for {}: {}. Additionally, {}",
+                path.display(),
+                test_error,
+                extra_error
+            );
+        }
+
+        bail!(
+            "Nginx config test failed and rollback completed for {}: {}",
+            path.display(),
+            test_error
+        );
+    }
+
+    if existed && backup_path.exists() {
+        let _ = fs::remove_file(&backup_path);
+    }
+
     Ok(())
 }

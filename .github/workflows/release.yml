@@ -39,9 +39,9 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross
+      - name: Install cross (binstall)
         if: matrix.use_cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+        run: cargo install cargo-binstall --locked && cargo binstall cross --version 0.2.5 --no-confirm
 
       - name: Build with cross
         if: matrix.use_cross
