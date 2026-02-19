@@ -1,2 +1,2 @@
-pub mod install;
 pub mod config;
+pub mod install;

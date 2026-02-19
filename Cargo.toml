@@ -16,7 +16,6 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
-thiserror = "1"
 dialoguer = "0.11"
 colored = "2"
 regex = "1"

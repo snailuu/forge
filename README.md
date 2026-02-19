@@ -160,7 +160,7 @@ sudo forge init --project myapp --domain example.com
 初始化会执行：
 1. 检查系统平台（仅支持 Linux）
 2. 安装 nginx
-3. 创建部署用户（密码：`<username>123`）
+3. 创建部署用户（默认锁定密码登录，建议使用 SSH 公钥）
 4. 配置 SSH 密钥（如果提供）
 5. 设置 /var/www 目录权限
 6. 创建项目目录和默认页面（如果选择）

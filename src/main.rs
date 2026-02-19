@@ -3,8 +3,8 @@ use clap::{Parser, Subcommand};
 mod commands;
 mod nginx;
 mod system;
-mod user;
 mod template;
+mod user;
 
 #[derive(Parser)]
 #[command(name = "forge")]
@@ -40,8 +40,11 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Init { user, project, domain, ssh_key } => {
-            commands::init::run(user, project, domain, ssh_key)
-        }
+        Commands::Init {
+            user,
+            project,
+            domain,
+            ssh_key,
+        } => commands::init::run(user, project, domain, ssh_key),
     }
 }

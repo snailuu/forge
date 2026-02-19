@@ -23,3 +23,9 @@ pub fn remove_default_site() -> Result<()> {
     let _ = SystemCommand::run("rm", &["-f", "/etc/nginx/sites-enabled/default"]);
     Ok(())
 }
+
+pub fn test_config() -> Result<()> {
+    SystemCommand::run_checked("nginx", &["-t"])?;
+    println!("✓ Nginx config test passed");
+    Ok(())
+}
